@@ -33,6 +33,15 @@ require "options"
 require "nvchad.autocmds"
 require "custom.function_lines"
 
+local cpp_gen = require("custom.cpp_gen")
+vim.api.nvim_create_user_command("GenCPPFile", function(opts)
+	cpp_gen.generate_cpp_file(opts.args)
+end, {nargs = "?"})
+local hpp_gen = require("custom.hpp_gen")
+vim.api.nvim_create_user_command("GenHPPFile", function(opts)
+	hpp_gen.generate_hpp_file(opts.args)
+end, {nargs = 1})
+
 vim.schedule(function()
   require "mappings"
 end)

@@ -29,35 +29,53 @@ function M.insert_header()
     local updated_date = os.date('%Y/%m/%d %H:%M:%S')
     local created_date = updated_date
 
+    -- Check if header already exists and extract Created and By lines
+    local existing_created_date, existing_author = nil, nil
     for i = 1, vim.fn.line('$') do
         local line = vim.fn.getline(i)
-        local match = line:match("Created: (%d+/%d+/%d+ %d+:%d+:%d+)")
-        if match then
-            created_date = match
+        if line:find("Created:") then
+            existing_created_date = line:match("Created: (%d+/%d+/%d+ %d+:%d+:%d+)")
+            existing_author = line:match("by ([^ ]+)$")
+        end
+        if line:find("By:") then
+            existing_author = line:match("By: ([^ ]+) ")
+        end
+        if existing_created_date and existing_author then break end
+    end
+
+    -- Use existing values if found, otherwise use defaults
+    created_date = existing_created_date or created_date
+    author = existing_author or author
+
+    local comment = get_comment_style()
+
+    -- Construct the header lines
+    local header = {}
+    table.insert(header,               comment.block_start .. " ************************************************************************** " .. comment.block_end)
+    table.insert(header,               comment.block_start .. "                                                                            " .. comment.block_end)
+    table.insert(header,               comment.block_start .. "                                                        :::      ::::::::   " .. comment.block_end)
+    table.insert(header, string.format(comment.block_start ..                                               "   %-51s:+:      :+:    :+:   " .. comment.block_end, filename))
+    table.insert(header,               comment.block_start .. "                                                    +:+ +:+         +:+     " .. comment.block_end)
+    table.insert(header, string.format(comment.block_start ..                                   "   By: %s %-33s+#+  +:+       +#+         " .. comment.block_end, author, email))
+    table.insert(header,               comment.block_start .. "                                                +#+#+#+#+#+   +#+           " .. comment.block_end)
+    table.insert(header, string.format(comment.block_start ..                             "   Created: %-20sby %-18s#+#    #+#             " .. comment.block_end, created_date, author))
+    table.insert(header, string.format(comment.block_start ..                            "   Updated: %-20sby %-17s###   ########.fr       " .. comment.block_end, updated_date, author))
+    table.insert(header,               comment.block_start .. "                                                                            " .. comment.block_end)
+    table.insert(header,               comment.block_start .. " ************************************************************************** " .. comment.block_end)
+
+    -- Check for an existing header and replace it; otherwise insert at the top
+    local first_line_of_header_found = false
+    for i = 1, vim.fn.line('$') do
+        local line = vim.fn.getline(i)
+        if line:find("By:") then
+            first_line_of_header_found = true
+            vim.api.nvim_buf_set_lines(0, 0, #header, false, header) -- Replace the header block
             break
         end
     end
 
-    local comment = get_comment_style()
-
-    local header = {}
-    table.insert(header, comment.block_start .. " ************************************************************************** " .. comment.block_end)
-    table.insert(header, comment.block_start .. string.rep(" ", 76) .. comment.block_end)
-    table.insert(header, comment.block_start .. "                                                        :::      ::::::::   " .. comment.block_end)
-    table.insert(header, string.format(comment.block_start .. "   %-51s:+:      :+:    :+:   " .. comment.block_end, filename))
-    table.insert(header, comment.block_start .. "                                                    +:+ +:+         +:+     " .. comment.block_end)
-    table.insert(header, string.format(comment.block_start .. "   By: %s %-33s+#+  +:+       +#+         " .. comment.block_end, author, email))
-    table.insert(header, comment.block_start .. "                                                +#+#+#+#+#+   +#+           " .. comment.block_end)
-    table.insert(header, string.format(comment.block_start .. "   Created: %-20sby %-18s#+#    #+#             " .. comment.block_end, created_date, author))
-    table.insert(header, string.format(comment.block_start .. "   Updated: %-20sby %-17s###   ########.fr       " .. comment.block_end, updated_date, author))
-    table.insert(header, comment.block_start .. string.rep(" ", 76) .. comment.block_end)
-    table.insert(header, comment.block_start .. " ************************************************************************** " .. comment.block_end)
-
-    local line = vim.fn.getline(6)
-    if line:find("By:") then
-        vim.api.nvim_buf_set_lines(0, 0, #header, false, header)
-    else
-        vim.api.nvim_buf_set_lines(0, 0, 0, false, header)
+    if not first_line_of_header_found then
+        vim.api.nvim_buf_set_lines(0, 0, 0, false, header) -- Insert new header at the top if none exists
     end
 end
 
